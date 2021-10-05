@@ -1,0 +1,49 @@
+import maya.cmds as cmds
+
+class Rename_Objects():
+    #Select items to be renamed. Input Prefix, Name, and Suffix.
+    def __init__(self):
+        
+        self.win = cmds.window(title="Rename Objects", widthHeight=(300,80))
+        
+        cmds.rowColumnLayout( numberOfColumns=2, columnAttach=(1, 'right', 0), columnWidth=[(1, 50), (2, 150)] )
+        cmds.text( label='Prefix: ' )
+        self.prefix = cmds.textField()
+        cmds.text( label='Name: ' )
+        self.name = cmds.textField()
+        cmds.text( label='Suffix: ' )
+        self.suffix = cmds.textField()
+        cmds.button(label="Rename Objects", command=self.refactored_rename_objects)
+        cmds.showWindow(self.win)
+    
+    def refactored_rename_objects(self,*argsf):
+        
+        prefix = cmds.textField(self.prefix,query=True,text=True)
+        name = cmds.textField(self.name,query=True,text=True)
+        suffix = cmds.textField(self.suffix,query=True,text=True)
+                
+        objects = cmds.ls(selection=True,dag=True)
+        
+        #nothing input
+        if not any([prefix, name, suffix]):
+            print("Nothing was input")
+            return
+        for counter,old_name in enumerate(objects):
+            #check if the old_name still exists
+            if not cmds.objExists(old_name):
+                continue
+            new_name_parts = []
+            #prefix
+            if prefix:
+                new_name_parts.append(prefix)
+            #name
+            if name:
+                new_name_parts.append(f"{name}{counter}")
+            #suffix
+            if suffix:
+                new_name_parts.append(suffix)
+            new_name = '_'.join(new_name_parts)
+            cmds.rename(old_name, new_name,ignoreShape=False )
+                
+        
+renamer= Rename_Objects() 

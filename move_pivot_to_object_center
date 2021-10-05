@@ -1,0 +1,11 @@
+def move_pivot_to_object_center():
+    objs = cmds.ls(selection=True)
+    print(objs)
+    for obj in objs:
+        position = cmds.objectCenter(obj)
+        print(position)
+        print(type(position[0]))
+        cmds.xform(obj, pivot=position,worldSpace=True)
+        #cleans up history
+        cmds.makeIdentity(obj, apply=True, rotate=True, scale=True, translate=True)
+        cmds.xform(deletePriorHistory=True)

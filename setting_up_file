@@ -1,0 +1,10 @@
+def set_project_path(path):
+    if cmds.workspace(list=True) != path:
+        cmds.workspace(path, openWorkspace=True)
+    else:
+        logging.info(f"current workspace: {path}")
+
+
+def save_file(file_name):
+    cmds.file(rename=file_name)
+    cmds.file(save=True, type="mayaAscii")

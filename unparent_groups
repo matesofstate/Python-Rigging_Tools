@@ -1,0 +1,21 @@
+def unparent_objects():
+    #Error is present if nothing is selected
+    child_objects=[]
+    filtered_objects=[]
+    selected_objects = cmds.ls(selection=True)
+    start_object = selected_objects[0]
+        
+    if len(selected_objects) == 1:
+        child_objects = cmds.listRelatives(allDescendents=True)
+        for child in child_objects:
+            if cmds.objectType(child) != "mesh":
+                filtered_objects.append(child)
+                print(child)
+        for child in filtered_objects:
+            cmds.parent(child, world=True)
+        filtered_objects.append(start_object)
+        print(filtered_objects)
+         
+        new_group = cmds.group(filtered_objects, name="Empty_Group")    
+    else:
+        print("more than one object is selected")

@@ -1,0 +1,200 @@
+import maya.cmds as cmds
+import maya.mel as mel
+import pymel.core as pm
+
+#Currently bugged refactor    
+class Rename_Objects():
+    #Select items to be renamed. Input Prefix, Name, and Suffix.
+    def __init__(self):
+        
+        self.win = cmds.window(title="Rename Objects", widthHeight=(300,80))
+        
+        cmds.rowColumnLayout( numberOfColumns=2, columnAttach=(1, 'right', 0), columnWidth=[(1, 50), (2, 150)] )
+        cmds.text( label='Prefix: ' )
+        self.prefix = cmds.textField()
+        cmds.text( label='Name: ' )
+        self.name = cmds.textField()
+        cmds.text( label='Suffix: ' )
+        self.suffix = cmds.textField()
+        cmds.button(label="Rename Objects", command=self.refactored_rename_objects)
+        cmds.showWindow(self.win)
+    
+    def refactored_rename_objects(self,*argsf):
+        
+        prefix = cmds.textField(self.prefix,query=True,text=True)
+        name = cmds.textField(self.name,query=True,text=True)
+        suffix = cmds.textField(self.suffix,query=True,text=True)
+                
+        objects = cmds.ls(selection=True,dag=True)
+        
+        #nothing input
+        if not any([prefix, name, suffix]):
+            print("Nothing was input")
+            return
+        for counter,old_name in enumerate(objects):
+            #check if the old_name still exists
+            if not cmds.objExists(old_name):
+                continue
+            new_name_parts = []
+            #prefix
+            if prefix:
+                new_name_parts.append(prefix)
+            #name
+            if name:
+                new_name_parts.append(f"{name}{counter}")
+            #suffix
+            if suffix:
+                new_name_parts.append(suffix)
+            new_name = '_'.join(new_name_parts)
+            cmds.rename(old_name, new_name,ignoreShape=False )
+
+#currently bugged. Refactor                
+def move_pivot_to_object_center():
+    objs = cmds.ls(selection=True)
+    print(objs)
+    for obj in objs:
+        position = cmds.objectCenter(obj)
+        print(position)
+        print(type(position[0]))
+        cmds.xform(obj, pivot=position,worldSpace=True)
+        #cleans up history
+        cmds.makeIdentity(obj, apply=True, rotate=True, scale=True, translate=True)
+        cmds.xform(deletePriorHistory=True)
+
+
+def set_project_path(path):
+    if cmds.workspace(list=True) != path:
+        cmds.workspace(path, openWorkspace=True)
+    else:
+        logging.info(f"current workspace: {path}")
+
+
+def save_file(file_name):
+    cmds.file(rename=file_name)
+    cmds.file(save=True, type="mayaAscii")
+
+ 
+def unhide_all_geometry():
+    pass
+
+
+def toggle_display_axis():
+    objects = get_current_selection()
+    for object in objects :
+        if pm.getAttr(object + ".displayLocalAxis") == False:
+            pm.setAttr(object + ".displayLocalAxis", True)
+        else:
+            pm.setAttr(object + ".displayLocalAxis", False)
+      
+            
+def create_circle_nurbs():
+    circle_control = cmds.circle( normal=[0.0, 1.0, 0.0], name="name_FK_ctrl")
+    return circle_control
+ 
+    
+def get_current_selection():
+    scene_objects = pm.ls(selection=True)
+    return scene_objects
+
+
+def create_nurbs_cube():
+    #create a cube and uses the vertex locations to draw curves between points to create a nurbs cube
+    
+    cube_to_get_points = pm.polyCube(name="temp_cube")[-2]
+    point_locations = cube_to_get_points.getPoints()
+    created_box_control = pm.curve(name="box_ctrl", degree=1, point=[point_locations[0],point_locations[1],point_locations[1],
+                                                                    point_locations[3],point_locations[2],point_locations[0],
+                                                                    point_locations[6],point_locations[4],point_locations[2],
+                                                                    point_locations[3],point_locations[5],point_locations[4],
+                                                                    point_locations[6], point_locations[7], point_locations[1],
+                                                                    point_locations[3],point_locations[5],point_locations[7]])
+    pm.delete(cube_to_get_points)
+
+
+def combine_selected_meshes_without_history():
+    object_selection = get_current_selection()
+    if len(object_selection) > 1:
+        combined_meshes = pm.polyUnite(object_selection,name = "combined_meshes", constructionHistory=False)
+        return combined_meshes
+    else:
+        print("to few objects were selected")
+
+
+def is_selection_greater_than_zero():
+    current_selection = get_current_selection()
+    if len(current_selection) > 0:
+        return True   
+    else:
+        return False
+
+def separate_meshes():
+    
+    object_to_be_separated = get_current_selection()
+    if is_selection_greater_than_zero():
+        individual_objects = pm.polySeparate(object_to_be_separated, constructionHistory=False)
+        current_parent = pm.listRelatives(individual_objects, parent=True)
+        new_objects = pm.parent(individual_objects, world=True)
+        pm.delete(current_parent)
+    else:
+        print("selection is not valid")
+  
+    
+def collect_objects_into_new_group():
+    if is_selection_greater_than_zero():
+        objects = get_current_selection()
+        group_for_objects_to_be_collected_in = pm.group(objects)
+        objects.append(group_for_objects_to_be_collected_in)
+        return objects
+
+
+def get_ordered_object_selection():
+    if is_selection_greater_than_zero():
+        current_ordered_selection = pm.ls(orderedSelection=True)
+        return current_ordered_selection
+
+
+def parent_separated_objects_into_hierarchy():
+      
+    if is_selection_greater_than_zero():
+        objects = get_ordered_object_selection()
+        for count, object in enumerate(objects):
+            if count+1 < len(objects):
+                pm.parent(objects[count+1], objects[count])
+
+        
+def snap_objects_with_parent_constraint():
+    if is_selection_greater_than_zero():
+        objects = get_ordered_object_selection()
+        constraints = []
+        for count, object in enumerate(objects):
+            if count+1 < len(objects):
+                temp_constraint = pm.parentConstraint(objects[count+1], objects[count], maintainOffset=False)
+                constraints.append(temp_constraint)
+        pm.delete(constraints, constraints=True)
+ 
+
+def orient_joints_to_YZZ():
+    pass
+    
+def snap_objects_with_rivet_constraint():
+    pass
+    
+def snap_objects_with_motionpath():
+    pass
+    
+def isolate_objects_in_all_viewports_simultaneously():
+    pass
+
+def unfreeze_objects():
+    pass
+
+def remove_empty_groups():
+    pass
+    
+
+def get_control_nurbs():
+    pass
+
+def unparent_objects():
+    pass
+
